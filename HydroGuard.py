@@ -8,6 +8,7 @@ from geopy.exc import GeocoderTimedOut, GeocoderServiceError
 import plotly.graph_objects as go
 import plotly.express as px
 import requests
+import time
 from datetime import datetime
 from math import radians, cos, sin, asin, sqrt, exp
 from sklearn.ensemble import RandomForestClassifier
@@ -209,6 +210,19 @@ def simulate_dam_break_hydrodynamics(dam, fill_percent, valley_km, lateral_offse
 # ---------------------------------------------------------
 # AI SENSOR PREDICTIVE MODEL
 # ---------------------------------------------------------
+def compute_structural_load_factor(dam):
+    """
+    Normalized (0-1) hydrostatic/volumetric loading factor for a dam, derived
+    from its actual crest height and reservoir capacity. Taller dams and
+    larger reservoirs carry proportionally greater structural loading.
+    This is what lets the risk model differentiate between facilities --
+    without it, every location feeds the classifier an identical feature
+    vector and the gauge never moves.
+    """
+    height_component = min(dam["crest_height_m"] / 300.0, 1.0)
+    volume_component = min(dam["capacity_mcm"] / 10000.0, 1.0)
+    return round(0.5 * height_component + 0.5 * volume_component, 4)
+
 @st.cache_resource
 def get_ai_risk_model():
     np.random.seed(42)
@@ -219,6 +233,7 @@ def get_ai_risk_model():
     strain = np.random.uniform(0.5, 45.0, n)
     rain = np.random.uniform(0, 150, n)
     seismic = np.random.uniform(0.0, 0.45, n)
+    struct_load = np.random.uniform(0.0, 1.0, n)  # per-dam structural loading factor
 
     threat_index = (
         (w_level / 100.0) * 0.30 +
@@ -226,10 +241,11 @@ def get_ai_risk_model():
         (pore_p / 400.0) * 0.20 +
         (strain / 35.0) * 0.15 +
         (rain / 120.0) * 0.10 +
-        (seismic / 0.30) * 0.25
+        (seismic / 0.30) * 0.25 +
+        struct_load * 0.20
     )
     y = (threat_index > 0.82).astype(int)
-    X = np.column_stack([w_level, seepage, pore_p, strain, rain, seismic])
+    X = np.column_stack([w_level, seepage, pore_p, strain, rain, seismic, struct_load])
 
     clf = RandomForestClassifier(n_estimators=100, max_depth=8, random_state=42)
     clf.fit(X, y)
@@ -305,20 +321,75 @@ st.sidebar.title("📍 Geocoding & Sensors")
 
 # Feature 1: Automated Plain-Text Geocoding
 st.sidebar.subheader("🔍 Search Location")
+
+
+@st.cache_resource(show_spinner=False)
+def get_geolocator():
+    # A descriptive, contactable user_agent is required by Nominatim's usage
+    # policy. Shared/anonymous agents on cloud IPs are the most likely to be
+    # throttled with HTTP 429.
+    return Nominatim(user_agent="hydroguard_dam_safety_app_contact_ops_team", timeout=8)
+
+
+@st.cache_data(show_spinner=False, ttl=3600)
+def geocode_address(query: str, max_retries: int = 4, base_delay: float = 1.5):
+    """
+    Geocode an address with exponential backoff retry.
+
+    Nominatim's free endpoint enforces a strict 1 request/second limit and
+    frequently returns HTTP 429 for shared/cloud egress IPs (e.g. Streamlit
+    Cloud) even when this app itself sends requests slowly. A single retry
+    attempt is not reliable, so back off and retry a few times before giving
+    up. Successful (and "not found") results are cached for an hour so the
+    same address never has to be re-queried.
+    """
+    geolocator = get_geolocator()
+    last_error = None
+    for attempt in range(max_retries):
+        try:
+            return geolocator.geocode(query)
+        except (GeocoderTimedOut, GeocoderServiceError) as e:
+            last_error = e
+            is_rate_limited = "429" in str(e)
+            # Rate-limit errors need a longer cool-down than plain timeouts.
+            sleep_for = base_delay * (2 ** attempt) * (1.5 if is_rate_limited else 1.0)
+            if attempt < max_retries - 1:
+                time.sleep(sleep_for)
+    raise last_error
+
+
 address_query = st.sidebar.text_input("Enter Address, City, or Landmark", placeholder="e.g., Rishikesh, Uttarakhand")
 if st.sidebar.button("Geocode Address"):
     if address_query.strip():
-        try:
-            geolocator = Nominatim(user_agent="hydroguard_dam_safety_v2")
-            location = geolocator.geocode(address_query, timeout=5)
-            if location:
-                st.session_state.user_lat = location.latitude
-                st.session_state.user_lon = location.longitude
-                st.sidebar.success(f"Located: {location.address[:45]}...")
-            else:
-                st.sidebar.error("Address not found. Please try another query.")
-        except (GeocoderTimedOut, GeocoderServiceError) as e:
-            st.sidebar.error(f"Geocoding service error: {e}")
+        with st.sidebar.status("Contacting geocoding service...", expanded=False) as status:
+            try:
+                location = geocode_address(address_query.strip())
+                if location:
+                    st.session_state.user_lat = location.latitude
+                    st.session_state.user_lon = location.longitude
+                    status.update(label=f"Located: {location.address[:45]}...", state="complete")
+                else:
+                    status.update(label="Address not found. Please try another query.", state="error")
+            except (GeocoderTimedOut, GeocoderServiceError) as e:
+                status.update(
+                    label="Geocoding service is rate-limited (HTTP 429) or unavailable after retries. "
+                          "Wait a moment and try again, or set coordinates manually below.",
+                    state="error"
+                )
+            except Exception as e:
+                status.update(label=f"Unexpected geocoding error: {e}", state="error")
+    else:
+        st.sidebar.warning("Enter an address first.")
+
+# Feature 1b: Manual coordinate fallback — keeps the app fully usable even
+# when the free Nominatim endpoint is throttled or unreachable.
+with st.sidebar.expander("✏️ Set coordinates manually"):
+    manual_lat = st.number_input("Latitude", value=float(st.session_state.user_lat), format="%.6f", key="manual_lat_input")
+    manual_lon = st.number_input("Longitude", value=float(st.session_state.user_lon), format="%.6f", key="manual_lon_input")
+    if st.button("Apply Coordinates"):
+        st.session_state.user_lat = manual_lat
+        st.session_state.user_lon = manual_lon
+        st.rerun()
 
 st.sidebar.markdown(f"**Current Coordinates:** `{st.session_state.user_lat:.4f}° N, {st.session_state.user_lon:.4f}° E`")
 
@@ -364,8 +435,10 @@ hydro_results = simulate_dam_break_hydrodynamics(
     nearest_dam, s_water, valley_km, lateral_offset
 )
 
-# AI Risk Classification
-sample_features = np.array([[s_water, s_seep, s_pore, s_strain, s_rain, s_seismic]])
+# AI Risk Classification (features include the NEAREST dam's structural
+# loading factor, so different locations -> different nearest dam -> different risk)
+dam_struct_load = compute_structural_load_factor(nearest_dam)
+sample_features = np.array([[s_water, s_seep, s_pore, s_strain, s_rain, s_seismic, dam_struct_load]])
 failure_prob = float(ai_model.predict_proba(sample_features)[0][1] * 100.0)
 
 # ---------------------------------------------------------
