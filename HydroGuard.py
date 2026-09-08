@@ -209,6 +209,19 @@ def simulate_dam_break_hydrodynamics(dam, fill_percent, valley_km, lateral_offse
 # ---------------------------------------------------------
 # AI SENSOR PREDICTIVE MODEL
 # ---------------------------------------------------------
+def compute_structural_load_factor(dam):
+    """
+    Normalized (0-1) hydrostatic/volumetric loading factor for a dam, derived
+    from its actual crest height and reservoir capacity. Taller dams and
+    larger reservoirs carry proportionally greater structural loading.
+    This is what lets the risk model differentiate between facilities --
+    without it, every location feeds the classifier an identical feature
+    vector and the gauge never moves.
+    """
+    height_component = min(dam["crest_height_m"] / 300.0, 1.0)
+    volume_component = min(dam["capacity_mcm"] / 10000.0, 1.0)
+    return round(0.5 * height_component + 0.5 * volume_component, 4)
+
 @st.cache_resource
 def get_ai_risk_model():
     np.random.seed(42)
@@ -219,6 +232,7 @@ def get_ai_risk_model():
     strain = np.random.uniform(0.5, 45.0, n)
     rain = np.random.uniform(0, 150, n)
     seismic = np.random.uniform(0.0, 0.45, n)
+    struct_load = np.random.uniform(0.0, 1.0, n)  # per-dam structural loading factor
 
     threat_index = (
         (w_level / 100.0) * 0.30 +
@@ -226,10 +240,11 @@ def get_ai_risk_model():
         (pore_p / 400.0) * 0.20 +
         (strain / 35.0) * 0.15 +
         (rain / 120.0) * 0.10 +
-        (seismic / 0.30) * 0.25
+        (seismic / 0.30) * 0.25 +
+        struct_load * 0.20
     )
     y = (threat_index > 0.82).astype(int)
-    X = np.column_stack([w_level, seepage, pore_p, strain, rain, seismic])
+    X = np.column_stack([w_level, seepage, pore_p, strain, rain, seismic, struct_load])
 
     clf = RandomForestClassifier(n_estimators=100, max_depth=8, random_state=42)
     clf.fit(X, y)
@@ -364,8 +379,10 @@ hydro_results = simulate_dam_break_hydrodynamics(
     nearest_dam, s_water, valley_km, lateral_offset
 )
 
-# AI Risk Classification
-sample_features = np.array([[s_water, s_seep, s_pore, s_strain, s_rain, s_seismic]])
+# AI Risk Classification (features include the NEAREST dam's structural
+# loading factor, so different locations -> different nearest dam -> different risk)
+dam_struct_load = compute_structural_load_factor(nearest_dam)
+sample_features = np.array([[s_water, s_seep, s_pore, s_strain, s_rain, s_seismic, dam_struct_load]])
 failure_prob = float(ai_model.predict_proba(sample_features)[0][1] * 100.0)
 
 # ---------------------------------------------------------
