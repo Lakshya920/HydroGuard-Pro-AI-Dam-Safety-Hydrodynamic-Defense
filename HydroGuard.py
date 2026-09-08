@@ -538,8 +538,8 @@ fig_hydro.add_vline(x=valley_km, line_width=2, line_dash="dash", line_color="bla
 fig_hydro.update_layout(
     title="Downstream Hydrodynamic Attenuation Curve",
     xaxis=dict(title="Distance Downstream from Dam (km)"),
-    yaxis=dict(title="Peak Inundation Depth (m)", titlefont=dict(color="blue")),
-    yaxis2=dict(title="Arrival Time (Minutes)", titlefont=dict(color="red"), overlaying="y", side="right"),
+    yaxis=dict(title=dict(text="Peak Inundation Depth (m)", font=dict(color="blue"))),
+    yaxis2=dict(title=dict(text="Arrival Time (Minutes)", font=dict(color="red")), overlaying="y", side="right"),
     height=280,
     margin=dict(l=40, r=40, t=40, b=30),
     legend=dict(orientation="h", y=1.15)
