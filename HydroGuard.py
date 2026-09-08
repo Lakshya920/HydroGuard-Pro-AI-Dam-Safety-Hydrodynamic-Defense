@@ -2,6 +2,7 @@ import streamlit as st
 import numpy as np
 import pandas as pd
 import folium
+from folium.plugins import AntPath
 from streamlit_folium import st_folium
 from geopy.geocoders import Nominatim
 from geopy.exc import GeocoderTimedOut, GeocoderServiceError
@@ -521,6 +522,51 @@ with col_left:
                     fill_opacity=0.25,
                     weight=1
                 ).add_to(m)
+
+    # "Directions" Route: User Location -> Nearest Dam (Google Maps style
+    # animated blue line, with the distance shown along the route)
+    route_points = [
+        [st.session_state.user_lat, st.session_state.user_lon],
+        [nearest_dam["lat"], nearest_dam["lon"]]
+    ]
+    AntPath(
+        locations=route_points,
+        color="#1a73e8",       # Google Maps route blue
+        weight=5,
+        opacity=0.85,
+        delay=800,
+        dash_array=[10, 20],
+        pulse_color="#ffffff",
+        tooltip=f"{nearest_dam['name']}: {nearest_dam['direct_dist_km']:.2f} km away"
+    ).add_to(m)
+
+    # Distance badge pinned at the route midpoint (mirrors the km label
+    # Google Maps shows along a route)
+    mid_lat = (st.session_state.user_lat + nearest_dam["lat"]) / 2.0
+    mid_lon = (st.session_state.user_lon + nearest_dam["lon"]) / 2.0
+    folium.Marker(
+        [mid_lat, mid_lon],
+        icon=folium.DivIcon(html=f"""
+            <div style="
+                background:#1a73e8;
+                color:#ffffff;
+                padding:4px 10px;
+                border-radius:14px;
+                font-size:12px;
+                font-weight:600;
+                font-family:Arial, sans-serif;
+                white-space:nowrap;
+                box-shadow:0 1px 4px rgba(0,0,0,0.45);
+                border:2px solid #ffffff;
+                transform:translate(-50%, -50%);
+            ">
+                📏 {nearest_dam['direct_dist_km']:.2f} km
+            </div>
+        """)
+    ).add_to(m)
+
+    # Keep both the user and the nearest dam visible in the initial view
+    m.fit_bounds(route_points, padding=(50, 50))
 
     # Capture User Map Click
     map_interaction = st_folium(m, height=450, width="100%", returned_objects=["last_clicked"])
