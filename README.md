@@ -41,12 +41,3 @@ HydroGuard Pro is an early warning decision-support platform designed to protect
 * **Geospatial & Mapping:** [Folium](https://python-visualization.github.io/folium/), [streamlit-folium](https://github.com/randyzwitch/streamlit-folium), [GeoPy](https://geopy.readthedocs.io/)[cite: 6]
 * **Visualization:** [Plotly](https://plotly.com/python/) (Gauge indicators and multi-axis attenuation curves)[cite: 6]
 * **Alert Delivery:** [Requests](https://requests.readthedocs.io/) (HTTP Webhooks, Twilio REST API, FCM REST API)[cite: 6]
-
----
-
-## 🚀 Quickstart
-
-### 1. Clone Repository
-```bash
-git clone [https://github.com/](https://github.com/)<your-username>/hydroguard-pro.git
-cd hydroguard-pro
