@@ -728,7 +728,11 @@ with tab_hydro:
     # Downstream Profile Plot
     dist_steps = np.linspace(1, 80, 50)
     v_const = hydro_results["wave_velocity_kmh"]
-    attenuation = [nearest_dam["crest_height_m"] * 0.45 * (s_water / 100.0) * exp(-0.018 * x) for x in dist_steps]
+    attenuation = [
+        nearest_dam["crest_height_m"] * 0.45 * (s_water / 100.0) * exp(-0.018 * x)
+        if hydro_results["in_flood_corridor"] else 0.0
+        for x in dist_steps
+    ]
     arrival_steps = [(x / v_const) * 60 for x in dist_steps]
 
     fig_hydro = go.Figure()
