@@ -44,11 +44,15 @@ st.markdown("""
         margin-bottom: 15px;
     }
     .weather-card {
-        background-color: #f8f9fa;
+        background-color: #000000;
         border-radius: 10px;
         padding: 14px;
-        border: 1px solid #dee2e6;
+        border: 1px solid #333333;
         text-align: center;
+        color: #ffffff;
+    }
+    .weather-card h3, .weather-card h5 {
+        color: #ffffff;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -114,7 +118,63 @@ DAMS_DATABASE = [
     {"id": "IND-33", "name": "Rana Pratap Sagar Dam", "state": "Rajasthan", "river": "Chambal", "lat": 24.9250, "lon": 75.5900, "type": "Masonry Gravity", "capacity_mcm": 2898.0, "crest_height_m": 53.8},
     {"id": "IND-34", "name": "Maithon Dam", "state": "Jharkhand", "river": "Barakar", "lat": 23.7889, "lon": 86.8150, "type": "Earth-fill & Concrete", "capacity_mcm": 1357.0, "crest_height_m": 50.3},
     {"id": "IND-35", "name": "Panchet Dam", "state": "Jharkhand", "river": "Damodar", "lat": 23.6706, "lon": 86.7450, "type": "Earthen Embankment", "capacity_mcm": 1497.0, "crest_height_m": 45.0},
-    {"id": "IND-36", "name": "Subansiri Lower Dam", "state": "Arunachal / Assam", "river": "Subansiri", "lat": 27.5539, "lon": 94.2600, "type": "Concrete Gravity", "capacity_mcm": 1365.0, "crest_height_m": 116.0}
+    {"id": "IND-36", "name": "Subansiri Lower Dam", "state": "Arunachal / Assam", "river": "Subansiri", "lat": 27.5539, "lon": 94.2600, "type": "Concrete Gravity", "capacity_mcm": 1365.0, "crest_height_m": 116.0},
+
+    # Additional Northern & Central Coverage
+    {"id": "IND-37", "name": "Ramganga Dam (Kalagarh)", "state": "Uttarakhand / UP", "river": "Ramganga", "lat": 29.4500, "lon": 78.9333, "type": "Earth & Rock-fill", "capacity_mcm": 2451.0, "crest_height_m": 128.0},
+    {"id": "IND-38", "name": "Matatila Dam", "state": "Uttar Pradesh / MP", "river": "Betwa", "lat": 25.0833, "lon": 78.4000, "type": "Masonry Gravity", "capacity_mcm": 1132.0, "crest_height_m": 34.0},
+    {"id": "IND-39", "name": "Bargi Dam", "state": "Madhya Pradesh", "river": "Narmada", "lat": 22.9833, "lon": 79.9167, "type": "Concrete Gravity", "capacity_mcm": 3175.0, "crest_height_m": 69.0},
+    {"id": "IND-40", "name": "Tawa Dam", "state": "Madhya Pradesh", "river": "Tawa", "lat": 22.4833, "lon": 77.8833, "type": "Earth & Masonry", "capacity_mcm": 2172.0, "crest_height_m": 57.5},
+    {"id": "IND-41", "name": "Omkareshwar Dam", "state": "Madhya Pradesh", "river": "Narmada", "lat": 22.2469, "lon": 76.1494, "type": "Concrete Gravity", "capacity_mcm": 1050.0, "crest_height_m": 73.0},
+    {"id": "IND-42", "name": "Barna Dam", "state": "Madhya Pradesh", "river": "Barna", "lat": 23.1167, "lon": 77.5833, "type": "Earthen Embankment", "capacity_mcm": 548.0, "crest_height_m": 44.0},
+    {"id": "IND-43", "name": "Tenughat Dam", "state": "Jharkhand", "river": "Damodar", "lat": 23.7833, "lon": 85.7833, "type": "Earthen Embankment", "capacity_mcm": 1071.0, "crest_height_m": 92.0},
+    {"id": "IND-44", "name": "Tilaiya Dam", "state": "Jharkhand", "river": "Barakar", "lat": 24.3167, "lon": 85.5333, "type": "Concrete & Earthen", "capacity_mcm": 293.0, "crest_height_m": 30.0},
+    {"id": "IND-45", "name": "Gangrel Dam (Ravishankar Sagar)", "state": "Chhattisgarh", "river": "Mahanadi", "lat": 20.5167, "lon": 81.6500, "type": "Earth & Masonry", "capacity_mcm": 909.0, "crest_height_m": 32.6},
+    {"id": "IND-46", "name": "Jawai Dam", "state": "Rajasthan", "river": "Jawai", "lat": 25.1667, "lon": 73.2333, "type": "Masonry Gravity", "capacity_mcm": 208.0, "crest_height_m": 61.0},
+    {"id": "IND-47", "name": "Mahi Bajaj Sagar Dam", "state": "Rajasthan", "river": "Mahi", "lat": 23.6167, "lon": 74.2833, "type": "Earth & Masonry", "capacity_mcm": 2226.0, "crest_height_m": 62.0},
+    {"id": "IND-48", "name": "Pandoh Dam", "state": "Himachal Pradesh", "river": "Beas", "lat": 31.6700, "lon": 77.0550, "type": "Concrete & Earth-fill", "capacity_mcm": 42.0, "crest_height_m": 76.0},
+    {"id": "IND-49", "name": "Shahpur Kandi Dam", "state": "Punjab", "river": "Ravi", "lat": 32.2667, "lon": 75.3167, "type": "Concrete Gravity", "capacity_mcm": 55.0, "crest_height_m": 55.5},
+
+    # Additional Western Coverage
+    {"id": "IND-50", "name": "Bhatsa Dam", "state": "Maharashtra", "river": "Bhatsa", "lat": 19.5333, "lon": 73.4667, "type": "Earth & Rubble Masonry", "capacity_mcm": 951.0, "crest_height_m": 87.8},
+    {"id": "IND-51", "name": "Gosikhurd Dam", "state": "Maharashtra", "river": "Wainganga", "lat": 20.9333, "lon": 79.7333, "type": "Concrete & Earthen", "capacity_mcm": 1080.0, "crest_height_m": 30.8},
+    {"id": "IND-52", "name": "Girna Dam", "state": "Maharashtra", "river": "Girna", "lat": 20.6500, "lon": 74.4167, "type": "Masonry Gravity", "capacity_mcm": 524.0, "crest_height_m": 57.6},
+    {"id": "IND-53", "name": "Radhanagari Dam", "state": "Maharashtra", "river": "Bhogawati", "lat": 16.3833, "lon": 73.9500, "type": "Masonry Gravity", "capacity_mcm": 356.0, "crest_height_m": 39.0},
+    {"id": "IND-54", "name": "Bhandardara Dam (Wilson Dam)", "state": "Maharashtra", "river": "Pravara", "lat": 19.5333, "lon": 73.7500, "type": "Masonry Gravity", "capacity_mcm": 304.0, "crest_height_m": 55.8},
+    {"id": "IND-55", "name": "Dantiwada Dam", "state": "Gujarat", "river": "Banas", "lat": 24.2667, "lon": 72.3167, "type": "Earthen & Masonry", "capacity_mcm": 411.0, "crest_height_m": 65.0},
+
+    # Additional Southern Coverage
+    {"id": "IND-56", "name": "Kabini Dam", "state": "Karnataka", "river": "Kabini", "lat": 11.9833, "lon": 76.3167, "type": "Earthen Embankment", "capacity_mcm": 552.0, "crest_height_m": 37.5},
+    {"id": "IND-57", "name": "Hemavathi Dam", "state": "Karnataka", "river": "Hemavathi", "lat": 12.7167, "lon": 76.0333, "type": "Earth & Masonry", "capacity_mcm": 926.0, "crest_height_m": 44.5},
+    {"id": "IND-58", "name": "Harangi Dam", "state": "Karnataka", "river": "Harangi", "lat": 12.5333, "lon": 75.9833, "type": "Earth & Masonry", "capacity_mcm": 219.0, "crest_height_m": 47.0},
+    {"id": "IND-59", "name": "Hidkal Dam (Ghataprabha)", "state": "Karnataka", "river": "Ghataprabha", "lat": 16.1000, "lon": 74.5833, "type": "Masonry Gravity", "capacity_mcm": 1104.0, "crest_height_m": 51.0},
+    {"id": "IND-60", "name": "Supa Dam", "state": "Karnataka", "river": "Kali", "lat": 14.9500, "lon": 74.6333, "type": "Earth & Masonry", "capacity_mcm": 4176.0, "crest_height_m": 101.0},
+    {"id": "IND-61", "name": "Nizam Sagar Dam", "state": "Telangana", "river": "Manjira", "lat": 18.1000, "lon": 77.9333, "type": "Masonry Gravity", "capacity_mcm": 894.0, "crest_height_m": 25.9},
+    {"id": "IND-62", "name": "Sriram Sagar Dam", "state": "Telangana", "river": "Godavari", "lat": 18.9333, "lon": 78.3500, "type": "Earth & Masonry", "capacity_mcm": 3171.0, "crest_height_m": 42.1},
+    {"id": "IND-63", "name": "Somasila Dam", "state": "Andhra Pradesh", "river": "Pennar", "lat": 14.4000, "lon": 79.4000, "type": "Earth & Masonry", "capacity_mcm": 2003.0, "crest_height_m": 34.5},
+    {"id": "IND-64", "name": "Pulichintala Dam", "state": "Andhra Pradesh", "river": "Krishna", "lat": 16.8667, "lon": 80.1667, "type": "Concrete Gravity", "capacity_mcm": 1177.0, "crest_height_m": 42.9},
+    {"id": "IND-65", "name": "Amaravathi Dam", "state": "Tamil Nadu", "river": "Amaravathi", "lat": 10.5667, "lon": 77.2833, "type": "Masonry Gravity", "capacity_mcm": 105.0, "crest_height_m": 47.9},
+    {"id": "IND-66", "name": "Aliyar Dam", "state": "Tamil Nadu", "river": "Aliyar", "lat": 10.4667, "lon": 76.9500, "type": "Earth & Masonry", "capacity_mcm": 110.0, "crest_height_m": 47.0},
+    {"id": "IND-67", "name": "Sholayar Dam", "state": "Tamil Nadu", "river": "Sholayar", "lat": 10.3167, "lon": 76.7833, "type": "Concrete Gravity", "capacity_mcm": 153.0, "crest_height_m": 47.0},
+    {"id": "IND-68", "name": "Banasura Sagar Dam", "state": "Kerala", "river": "Karamanthodu", "lat": 11.6167, "lon": 76.0333, "type": "Earth & Rock-fill", "capacity_mcm": 375.0, "crest_height_m": 66.0},
+    {"id": "IND-69", "name": "Kakki Dam", "state": "Kerala", "river": "Kakkiar", "lat": 9.3333, "lon": 77.1333, "type": "Concrete Gravity", "capacity_mcm": 452.7, "crest_height_m": 55.5},
+    {"id": "IND-70", "name": "Parambikulam Dam", "state": "Kerala / Tamil Nadu", "river": "Parambikulam", "lat": 10.3833, "lon": 76.8000, "type": "Concrete Gravity", "capacity_mcm": 537.0, "crest_height_m": 46.3},
+
+    # Additional Eastern & Northeastern Coverage
+    {"id": "IND-71", "name": "Rengali Dam", "state": "Odisha", "river": "Brahmani", "lat": 21.4500, "lon": 84.9333, "type": "Earth & Concrete", "capacity_mcm": 4404.0, "crest_height_m": 70.0},
+    {"id": "IND-72", "name": "Upper Indravati Dam", "state": "Odisha", "river": "Indravati", "lat": 19.2500, "lon": 82.6333, "type": "Earth & Rock-fill", "capacity_mcm": 1980.0, "crest_height_m": 60.0},
+    {"id": "IND-73", "name": "Massanjore Dam", "state": "West Bengal / Jharkhand", "river": "Mayurakshi", "lat": 24.2833, "lon": 87.5667, "type": "Concrete Gravity", "capacity_mcm": 616.0, "crest_height_m": 45.0},
+    {"id": "IND-74", "name": "Kangsabati Dam", "state": "West Bengal", "river": "Kangsabati", "lat": 22.9333, "lon": 86.6833, "type": "Earthen Embankment", "capacity_mcm": 1360.0, "crest_height_m": 33.0},
+    {"id": "IND-75", "name": "Ranganadi Dam", "state": "Arunachal Pradesh", "river": "Ranganadi", "lat": 27.1000, "lon": 93.8167, "type": "Concrete Gravity", "capacity_mcm": 19.5, "crest_height_m": 111.0},
+    {"id": "IND-76", "name": "Doyang Dam", "state": "Nagaland", "river": "Doyang", "lat": 26.2833, "lon": 94.2833, "type": "Earth & Rock-fill", "capacity_mcm": 500.0, "crest_height_m": 82.0},
+    {"id": "IND-77", "name": "Umiam Dam (Barapani)", "state": "Meghalaya", "river": "Umiam", "lat": 25.6667, "lon": 91.8833, "type": "Earthen Embankment", "capacity_mcm": 220.5, "crest_height_m": 30.8},
+    {"id": "IND-78", "name": "Kopili Dam", "state": "Assam", "river": "Kopili", "lat": 25.5333, "lon": 92.8333, "type": "Concrete & Earthen", "capacity_mcm": 220.0, "crest_height_m": 60.0},
+    {"id": "IND-79", "name": "Gumti Dam (Dumbur)", "state": "Tripura", "river": "Gumti", "lat": 23.6167, "lon": 91.8500, "type": "Earthen Embankment", "capacity_mcm": 268.0, "crest_height_m": 30.0},
+    {"id": "IND-80", "name": "Ithai Barrage (Loktak)", "state": "Manipur", "river": "Manipur", "lat": 24.5667, "lon": 93.7833, "type": "Concrete Barrage", "capacity_mcm": 780.0, "crest_height_m": 32.0},
+
+    # Union Territories & Smaller State Coverage
+    {"id": "IND-81", "name": "Selaulim Dam", "state": "Goa", "river": "Selaulim", "lat": 15.2333, "lon": 74.1667, "type": "Earthen Embankment", "capacity_mcm": 174.8, "crest_height_m": 37.7},
+    {"id": "IND-82", "name": "Teesta V Dam", "state": "Sikkim", "river": "Teesta", "lat": 27.1667, "lon": 88.4833, "type": "Concrete Gravity", "capacity_mcm": 9.35, "crest_height_m": 90.5}
 ]
 
 # ---------------------------------------------------------
@@ -204,7 +264,7 @@ def simulate_dam_break_hydrodynamics(dam, fill_percent, valley_km, lateral_offse
 @st.cache_data(ttl=600)
 def fetch_live_weather(lat, lon):
     """Queries Open-Meteo for real-time weather data at the dam location."""
-    url = f"[https://api.open-meteo.com/v1/forecast?latitude=](https://api.open-meteo.com/v1/forecast?latitude=){lat}&longitude={lon}&current=temperature_2m,relative_humidity_2m,precipitation,weather_code,wind_speed_10m&timezone=auto"
+    url = f"https://api.open-meteo.com/v1/forecast?latitude={lat}&longitude={lon}&current=temperature_2m,relative_humidity_2m,precipitation,weather_code,wind_speed_10m&timezone=auto"
     try:
         r = requests.get(url, timeout=4)
         if r.status_code == 200:
@@ -281,7 +341,7 @@ def dispatch_emergency_broadcast(channels, payload, twilio_cfg, webhook_url, fcm
 
     if channels.get("twilio") and twilio_cfg.get("sid") and twilio_cfg.get("token"):
         try:
-            url = f"[https://api.twilio.com/2010-04-01/Accounts/](https://api.twilio.com/2010-04-01/Accounts/){twilio_cfg['sid']}/Messages.json"
+            url = f"https://api.twilio.com/2010-04-01/Accounts/{twilio_cfg['sid']}/Messages.json"
             sms_body = (
                 f"🚨 HYDROGUARD CRITICAL ALERT: Impending breach/overflow at {payload['dam_name']} "
                 f"({payload['risk_score']}% Risk). Predicted hit: {payload.get('impact_time', 'N/A')}. Move to high ground!"
@@ -294,7 +354,7 @@ def dispatch_emergency_broadcast(channels, payload, twilio_cfg, webhook_url, fcm
 
     if channels.get("fcm") and fcm_cfg.get("server_key"):
         try:
-            fcm_url = "[https://fcm.googleapis.com/fcm/send](https://fcm.googleapis.com/fcm/send)"
+            fcm_url = "https://fcm.googleapis.com/fcm/send"
             headers = {"Authorization": f"key={fcm_cfg['server_key']}", "Content-Type": "application/json"}
             fcm_payload = {
                 "to": fcm_cfg.get("topic", "/topics/all_citizens"),
@@ -625,33 +685,33 @@ with tab_weather:
     wc1, wc2, wc3, wc4 = st.columns(4)
     wc1.markdown(f"""
     <div class="weather-card">
-        <h5 style="margin:0; color:gray;">Atmosphere</h5>
+        <h5 style="margin:0; color:#b0b0b0;">Atmosphere</h5>
         <h3 style="margin:8px 0;">{weather['condition']}</h3>
-        <span style="font-size:12px; color:#0077be;">Live satellite telemetry</span>
+        <span style="font-size:12px; color:#4fc3f7;">Live satellite telemetry</span>
     </div>
     """, unsafe_allow_html=True)
 
     wc2.markdown(f"""
     <div class="weather-card">
-        <h5 style="margin:0; color:gray;">Precipitation Rate</h5>
+        <h5 style="margin:0; color:#b0b0b0;">Precipitation Rate</h5>
         <h3 style="margin:8px 0;">{weather['rain_mm']} mm</h3>
-        <span style="font-size:12px; color:#0077be;">Catchment rainfall</span>
+        <span style="font-size:12px; color:#4fc3f7;">Catchment rainfall</span>
     </div>
     """, unsafe_allow_html=True)
 
     wc3.markdown(f"""
     <div class="weather-card">
-        <h5 style="margin:0; color:gray;">Relative Humidity</h5>
+        <h5 style="margin:0; color:#b0b0b0;">Relative Humidity</h5>
         <h3 style="margin:8px 0;">{weather['humidity']}%</h3>
-        <span style="font-size:12px; color:#0077be;">Vapor saturation</span>
+        <span style="font-size:12px; color:#4fc3f7;">Vapor saturation</span>
     </div>
     """, unsafe_allow_html=True)
 
     wc4.markdown(f"""
     <div class="weather-card">
-        <h5 style="margin:0; color:gray;">Wind Speed</h5>
+        <h5 style="margin:0; color:#b0b0b0;">Wind Speed</h5>
         <h3 style="margin:8px 0;">{weather['wind_kmh']} km/h</h3>
-        <span style="font-size:12px; color:#0077be;">Crest anemometer</span>
+        <span style="font-size:12px; color:#4fc3f7;">Crest anemometer</span>
     </div>
     """, unsafe_allow_html=True)
 
@@ -719,7 +779,7 @@ with tab_broadcast:
     st.subheader("📢 Multi-Channel Civil Defense Broadcast Center")
 
     alert_payload = {
-        "dam_id": nearest_dam["id"],
+        "dam_id": nearest_dam.get("id", "N/A"),
         "dam_name": nearest_dam["name"],
         "risk_score": round(failure_prob, 1),
         "is_flood_expected": is_flood_expected,
