@@ -288,6 +288,85 @@ def fetch_live_weather(lat, lon):
     return {"temp_c": "28.0", "humidity": "65", "rain_mm": 0.0, "wind_kmh": "10.5", "condition": "Station Normal ⛅"}
 
 # ---------------------------------------------------------
+# LIVE SCADA / IoT TELEMETRY ACQUISITION
+# ---------------------------------------------------------
+# This layer is protocol-agnostic on purpose: real dam instrumentation is
+# wired to piezometers, extensometers, weirs/flumes and strong-motion
+# accelerographs through a plant-floor historian (OPC-UA, Modbus TCP/RTU,
+# DNP3, etc.), and that historian is what typically exposes a REST or
+# MQTT-bridge endpoint to the outside world - a browser app like this one
+# is never talking Modbus/OPC-UA directly to field devices. Point
+# SCADA_GATEWAY_BASE_URL / SCADA_GATEWAY_API_KEY at YOUR authority's
+# historian gateway (PI Web API, Ignition, ClearSCADA, a custom IoT
+# platform, etc.) and adjust the endpoint path / JSON keys below to match
+# its actual contract. Nothing here will connect to any real dam until you
+# supply genuine, authorized credentials for your own infrastructure.
+EXPECTED_SCADA_FIELDS = {
+    "reservoir_level_pct": "Reservoir Water Level (% of crest)",
+    "seepage_lpm": "Foundation/Toe-Drain Seepage (L/min)",
+    "pore_pressure_kpa": "Piezometric Pore Pressure (kPa)",
+    "displacement_strain_mm": "Crest Displacement / Strain (mm)",
+    "seismic_pga_g": "Peak Ground Acceleration (g)",
+}
+
+@st.cache_data(ttl=15, show_spinner=False)
+def fetch_scada_telemetry(dam_id: str, base_url: str, api_key: str, timeout: float = 5.0):
+    """
+    Pulls the latest geotechnical/seismic readings for one dam from a
+    SCADA/IoT telemetry gateway.
+
+    Expected gateway contract (edit to match your real system):
+        GET {base_url}/dams/{dam_id}/telemetry/latest
+        Header: Authorization: Bearer {api_key}
+        JSON body:
+            {
+              "reservoir_level_pct": <float>,
+              "seepage_lpm": <float>,
+              "pore_pressure_kpa": <float>,
+              "displacement_strain_mm": <float>,
+              "seismic_pga_g": <float>,
+              "timestamp": "<ISO-8601>",
+              "tag_quality": "GOOD" | "STALE" | "BAD"
+            }
+
+    Returns a dict of readings on success, or {"error": "..."} on any
+    failure - callers must always check for "error" and fall back to a
+    safe/manual value rather than trusting a partial or absent reading.
+    """
+    if not base_url or not api_key:
+        return {"error": "No SCADA gateway configured"}
+
+    url = f"{base_url.rstrip('/')}/dams/{dam_id}/telemetry/latest"
+    headers = {"Authorization": f"Bearer {api_key}"}
+    try:
+        r = requests.get(url, headers=headers, timeout=timeout)
+        r.raise_for_status()
+        data = r.json()
+    except requests.exceptions.Timeout:
+        return {"error": "SCADA gateway timed out"}
+    except requests.exceptions.RequestException as e:
+        return {"error": f"SCADA connection failed: {str(e)[:80]}"}
+    except ValueError:
+        return {"error": "SCADA gateway returned invalid JSON"}
+
+    missing = [k for k in EXPECTED_SCADA_FIELDS if k not in data]
+    if missing:
+        return {"error": f"Telemetry payload missing tag(s): {', '.join(missing)}"}
+
+    quality = data.get("tag_quality", "UNKNOWN")
+    if quality == "BAD":
+        return {"error": "SCADA reports BAD tag quality - discarding sample"}
+
+    try:
+        reading = {k: float(data[k]) for k in EXPECTED_SCADA_FIELDS}
+    except (TypeError, ValueError):
+        return {"error": "Telemetry payload contained non-numeric values"}
+
+    reading["timestamp"] = data.get("timestamp", datetime.now().isoformat())
+    reading["quality"] = quality
+    return reading
+
+# ---------------------------------------------------------
 # AI SENSOR PREDICTIVE CLASSIFIER
 # ---------------------------------------------------------
 def compute_structural_load_factor(dam):
@@ -448,32 +527,9 @@ with st.sidebar.expander("✏️ Set coordinates manually"):
 
 st.sidebar.markdown(f"**Current Position:** `{st.session_state.user_lat:.4f}° N, {st.session_state.user_lon:.4f}° E`")
 
-# Sensor Simulation Presets
-st.sidebar.markdown("---")
-st.sidebar.subheader("🎛️ Sensor Simulation Presets")
-scenario = st.sidebar.selectbox(
-    "Structural Scenario",
-    ["Normal Steady State", "High Monsoon Runoff", "Active Foundation Piping", "Critical Imminent Breach"]
-)
-
-if scenario == "Normal Steady State":
-    defaults = [62.0, 15.0, 110.0, 2.0, 4.0, 0.01]
-elif scenario == "High Monsoon Runoff":
-    defaults = [93.5, 55.0, 275.0, 7.5, 95.0, 0.03]
-elif scenario == "Active Foundation Piping":
-    defaults = [89.0, 92.0, 360.0, 24.0, 45.0, 0.09]
-else:
-    defaults = [104.2, 120.0, 440.0, 41.0, 140.0, 0.35]
-
-s_water = st.sidebar.slider("Reservoir Water Level (% Crest)", 20.0, 115.0, float(defaults[0]))
-s_seep = st.sidebar.slider("Piezometer Seepage (L/min)", 0.0, 150.0, float(defaults[1]))
-s_pore = st.sidebar.slider("Pore Pressure (kPa)", 50.0, 500.0, float(defaults[2]))
-s_strain = st.sidebar.slider("Crest Displacement Strain (mm)", 0.0, 50.0, float(defaults[3]))
-s_rain = st.sidebar.slider("Catchment Rainfall (mm/hr)", 0.0, 160.0, float(defaults[4]))
-s_seismic = st.sidebar.slider("Peak Ground Acceleration (g)", 0.0, 0.50, float(defaults[5]), step=0.01)
-
 # ---------------------------------------------------------
-# NEAREST FACILITY & HYDRODYNAMICS CALCULATION
+# NEAREST FACILITY, VALLEY GEOMETRY & LIVE WEATHER
+# (Resolved before sensor acquisition since telemetry is fetched per-dam)
 # ---------------------------------------------------------
 dams_with_dist = []
 for d in dams_list:
@@ -487,17 +543,95 @@ nearest_dam = sorted_dams[0]
 valley_km, lateral_offset = compute_valley_distance(
     nearest_dam, st.session_state.user_lat, st.session_state.user_lon
 )
+
+# Live Weather Fetch for Nearest Dam
+weather = fetch_live_weather(nearest_dam["lat"], nearest_dam["lon"])
+
+# ---------------------------------------------------------
+# SENSOR TELEMETRY: LIVE SCADA/IoT FEED OR MANUAL SIMULATION
+# ---------------------------------------------------------
+st.sidebar.markdown("---")
+st.sidebar.subheader("🔌 Sensor Telemetry Source")
+data_mode = st.sidebar.radio(
+    "Telemetry Mode",
+    ["🔌 Live SCADA / IoT Feed", "🎛️ Manual Simulation"],
+    index=1,
+    help="Live mode polls your dam authority's SCADA/IoT telemetry gateway for this dam's real-time readings. It requires a genuine, authorized gateway connection configured below."
+)
+live_mode = data_mode.startswith("🔌")
+
+with st.sidebar.expander("⚙️ SCADA / IoT Gateway Connection", expanded=live_mode):
+    scada_base_url = st.text_input(
+        "Telemetry Gateway Base URL", value="",
+        placeholder="https://scada-gateway.your-dam-authority.example/api/v1",
+        help="Your OPC-UA/Modbus historian's REST bridge, MQTT-HTTP gateway, or vendor SCADA web API (e.g. PI Web API, Ignition, ClearSCADA)."
+    )
+    scada_api_key = st.text_input("API Key / Bearer Token", value="", type="password")
+    st.caption(
+        "Credentials are held only in this browser session and are never persisted. "
+        f"HydroGuard will call `GET {{base_url}}/dams/{nearest_dam.get('id','DAM_ID')}/telemetry/latest` "
+        "for the selected facility - adjust `fetch_scada_telemetry()` in the code if your gateway's contract differs."
+    )
+
+scada_reading = None
+sensor_source_label = "🎛️ Manual Simulation"
+sensor_timestamp = None
+
+if live_mode:
+    scada_reading = fetch_scada_telemetry(nearest_dam.get("id", "UNKNOWN"), scada_base_url, scada_api_key)
+
+if live_mode and scada_reading and "error" not in scada_reading:
+    s_water = scada_reading["reservoir_level_pct"]
+    s_seep = scada_reading["seepage_lpm"]
+    s_pore = scada_reading["pore_pressure_kpa"]
+    s_strain = scada_reading["displacement_strain_mm"]
+    s_seismic = scada_reading["seismic_pga_g"]
+    s_rain = float(weather.get("rain_mm", 0.0) or 0.0)
+    sensor_timestamp = scada_reading.get("timestamp")
+    quality = scada_reading.get("quality", "UNKNOWN")
+    sensor_source_label = f"🟢 LIVE SCADA ({quality})"
+    st.sidebar.success(f"Live telemetry connected for {nearest_dam['name']} ({sensor_timestamp}).")
+else:
+    if live_mode:
+        # Live mode was requested but the gateway isn't reachable/configured -
+        # never silently invent "live" numbers; fall back to explicit manual
+        # simulation and tell the operator exactly why.
+        reason = scada_reading["error"] if scada_reading and "error" in scada_reading else "No gateway configured"
+        st.sidebar.error(f"⚠️ Live SCADA feed unavailable: {reason}. Falling back to manual simulation below.")
+
+    st.sidebar.markdown("##### 🎛️ Manual Simulation Inputs")
+    scenario = st.sidebar.selectbox(
+        "Structural Scenario",
+        ["Normal Steady State", "High Monsoon Runoff", "Active Foundation Piping", "Critical Imminent Breach"]
+    )
+
+    if scenario == "Normal Steady State":
+        defaults = [62.0, 15.0, 110.0, 2.0, 4.0, 0.01]
+    elif scenario == "High Monsoon Runoff":
+        defaults = [93.5, 55.0, 275.0, 7.5, 95.0, 0.03]
+    elif scenario == "Active Foundation Piping":
+        defaults = [89.0, 92.0, 360.0, 24.0, 45.0, 0.09]
+    else:
+        defaults = [104.2, 120.0, 440.0, 41.0, 140.0, 0.35]
+
+    s_water = st.sidebar.slider("Reservoir Water Level (% Crest)", 20.0, 115.0, float(defaults[0]))
+    s_seep = st.sidebar.slider("Piezometer Seepage (L/min)", 0.0, 150.0, float(defaults[1]))
+    s_pore = st.sidebar.slider("Pore Pressure (kPa)", 50.0, 500.0, float(defaults[2]))
+    s_strain = st.sidebar.slider("Crest Displacement Strain (mm)", 0.0, 50.0, float(defaults[3]))
+    s_rain = st.sidebar.slider("Catchment Rainfall (mm/hr)", 0.0, 160.0, float(defaults[4]))
+    s_seismic = st.sidebar.slider("Peak Ground Acceleration (g)", 0.0, 0.50, float(defaults[5]), step=0.01)
+    sensor_source_label = "🎛️ Manual Simulation"
+
+# ---------------------------------------------------------
+# HYDRODYNAMICS & AI RISK ASSESSMENT
+# ---------------------------------------------------------
 hydro_results = simulate_dam_break_hydrodynamics(
     nearest_dam, s_water, valley_km, lateral_offset
 )
 
-# AI Risk Assessment
 dam_struct_load = compute_structural_load_factor(nearest_dam)
 sample_features = np.array([[s_water, s_seep, s_pore, s_strain, s_rain, s_seismic, dam_struct_load]])
 failure_prob = float(ai_model.predict_proba(sample_features)[0][1] * 100.0)
-
-# Live Weather Fetch for Nearest Dam
-weather = fetch_live_weather(nearest_dam["lat"], nearest_dam["lon"])
 
 # ---------------------------------------------------------
 # FLOOD HIT DATE & TIME PREDICTION
@@ -754,6 +888,10 @@ with tab_hydro:
 # ------------------- TAB 4: SENSOR TELEMETRY -------------------
 with tab_telemetry:
     st.subheader("📊 Geotechnical Telemetry & AI Risk Driver Contribution")
+    st.caption(
+        f"Data source: **{sensor_source_label}**"
+        + (f" · Reading time: `{sensor_timestamp}`" if sensor_timestamp else "")
+    )
 
     t1, t2, t3, t4, t5, t6 = st.columns(6)
     t1.metric("Water Level", f"{s_water:.1f}%", "Safe" if s_water < 90 else "Critical", delta_color="inverse")
